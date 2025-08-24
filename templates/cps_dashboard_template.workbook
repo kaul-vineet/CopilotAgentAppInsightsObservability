@@ -1,0 +1,583 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "content": {
+        "json": "## Performance Investigations\n---\n\nThis workbook is used to investigate the performance of Ceba based on test runs\n\n- The following queries rely on the **Time Range** - *THIS SHOULD BE IN LOCAL TIME*\n- **Execution Times by Kind** summarises the execution times of each action type\n- **Execution Times by Topic** summarises the execution times of each topic\n- **Execution Times by Kind and Topic** summarises the execution times of each action type by action type and topic\n",
+        "style": "info"
+      },
+      "name": "text - 2"
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "92e80d9d-b12b-4e62-813b-2c74f3f72865",
+            "version": "KqlParameterItem/1.0",
+            "name": "timerange",
+            "label": "Time Range",
+            "type": 4,
+            "isRequired": true,
+            "typeSettings": {
+              "selectableValues": [
+                {
+                  "durationMs": 3600000
+                },
+                {
+                  "durationMs": 14400000
+                },
+                {
+                  "durationMs": 43200000
+                },
+                {
+                  "durationMs": 86400000
+                },
+                {
+                  "durationMs": 172800000
+                },
+                {
+                  "durationMs": 259200000
+                },
+                {
+                  "durationMs": 604800000
+                },
+                {
+                  "durationMs": 1209600000
+                }
+              ],
+              "allowCustom": true
+            },
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "value": {
+              "durationMs": 172800000
+            }
+          }
+        ],
+        "style": "pills",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components"
+      },
+      "name": "Time range for test run"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let AllFlows = customEvents\r\n| where timestamp {timerange} \r\n| extend conversationId = tostring(customDimensions[\"conversationId\"])\r\n| sort by conversationId asc, timestamp asc\r\n| scan declare (lastReceived: datetime=datetime(null)) with\r\n(\r\n    step s1: true => lastReceived = iif(name != \"BotMessageReceived\", s1.lastReceived, timestamp);\r\n)\r\n| serialize\r\n| extend isLastInSequence = iif(coalesce(next(name), \"BotMessageReceived\") == \"BotMessageReceived\", true, false)\r\n| extend elapsed = iff(name == \"BotMessageReceived\", 0, datetime_diff(\"Millisecond\", timestamp, prev(timestamp)))\r\n| project \r\n    conversationId, \r\n    timestamp, name, \r\n    type = tostring(customDimensions[\"type\"]), \r\n    lastReceived, \r\n    elapsed, \r\n    totalElapsed = datetime_diff(\"Millisecond\", timestamp, lastReceived), \r\n    isLastInSequence, \r\n    customDimensions, \r\n    nodeKind = tostring(coalesce(customDimensions[\"Kind\"], name)), \r\n    topicId = tostring(coalesce(customDimensions[\"TopicId\"], customDimensions[\"TopicName\"]));\r\n\r\nAllFlows\r\n| summarize\r\n  MaxElapsed = max(elapsed),\r\n  MinElapsed = min(elapsed),\r\n  AvgElapsed = round(avg(elapsed), 2),\r\n  StdDevElapsed = round(stdev(elapsed), 2),\r\n  Percentile90Elapsed = percentile(elapsed, 90),\r\n  Percentile10Elapsed = percentile(elapsed, 10),\r\n  Count = count(),\r\n  TotalElapsed = sum(elapsed)\r\n  by nodeKind\r\n| sort by AvgElapsed desc\r\n| render areachart",
+        "size": 0,
+        "showExportToExcel": true,
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "gridSettings": {
+          "rowLimit": 10000,
+          "sortBy": [
+            {
+              "itemKey": "AvgElapsed",
+              "sortOrder": 1
+            }
+          ]
+        },
+        "sortBy": [
+          {
+            "itemKey": "AvgElapsed",
+            "sortOrder": 1
+          }
+        ]
+      },
+      "name": "Execution Times by Kind"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let AllFlows = customEvents\r\n| where timestamp {timerange} \r\n| extend conversationId = tostring(customDimensions[\"conversationId\"])\r\n| sort by conversationId asc, timestamp asc\r\n| scan declare (lastReceived: datetime=datetime(null)) with\r\n(\r\n    step s1: true => lastReceived = iif(name != \"BotMessageReceived\", s1.lastReceived, timestamp);\r\n)\r\n| serialize\r\n| extend isLastInSequence = iif(coalesce(next(name), \"BotMessageReceived\") == \"BotMessageReceived\", true, false)\r\n| extend elapsed = iff(name == \"BotMessageReceived\", 0, datetime_diff(\"Millisecond\", timestamp, prev(timestamp)))\r\n| project \r\n    conversationId, \r\n    timestamp, name, \r\n    type = tostring(customDimensions[\"type\"]), \r\n    lastReceived, \r\n    elapsed, \r\n    totalElapsed = datetime_diff(\"Millisecond\", timestamp, lastReceived), \r\n    isLastInSequence, \r\n    customDimensions, \r\n    nodeKind = tostring(coalesce(customDimensions[\"Kind\"], name)), \r\n    topicId = tostring(coalesce(customDimensions[\"TopicId\"], customDimensions[\"TopicName\"])),\r\n    actionId = tostring(customDimensions[\"ActionId\"])\r\n| where nodeKind == \"InvokeFlowAction\" or nodeKind == \"InvokeConnectorAction\" or nodeKind == \"SearchAndSummarizeContent\";\r\n\r\nAllFlows\r\n| summarize\r\n  MaxElapsed = max(elapsed),\r\n  MinElapsed = min(elapsed),\r\n  AvgElapsed = round(avg(elapsed), 2),\r\n  StdDevElapsed = round(stdev(elapsed), 2),\r\n  Percentile90Elapsed = percentile(elapsed, 90),\r\n  Percentile10Elapsed = percentile(elapsed, 10),\r\n  Count = count(),\r\n  TotalElapsed = sum(elapsed)\r\n  by topicId, nodeKind, actionId\r\n| sort by AvgElapsed desc",
+        "size": 0,
+        "title": "Flow, Connector and Gen AI Execution Times",
+        "showExportToExcel": true,
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "gridSettings": {
+          "rowLimit": 10000,
+          "sortBy": [
+            {
+              "itemKey": "MaxElapsed",
+              "sortOrder": 2
+            }
+          ]
+        },
+        "sortBy": [
+          {
+            "itemKey": "MaxElapsed",
+            "sortOrder": 2
+          }
+        ]
+      },
+      "name": "Flow, Connector and Gen AI Execution Times"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let AllFlows = customEvents\r\n| where timestamp {timerange} \r\n| extend conversationId = tostring(customDimensions[\"conversationId\"])\r\n| sort by conversationId asc, timestamp asc\r\n| scan declare (lastReceived: datetime=datetime(null)) with\r\n(\r\n    step s1: true => lastReceived = iif(name != \"BotMessageReceived\", s1.lastReceived, timestamp);\r\n)\r\n| serialize\r\n| extend isLastInSequence = iif(coalesce(next(name), \"BotMessageReceived\") == \"BotMessageReceived\", true, false)\r\n| extend elapsed = iff(name == \"BotMessageReceived\", 0, datetime_diff(\"Millisecond\", timestamp, prev(timestamp)))\r\n| project \r\n    conversationId, \r\n    timestamp, name, \r\n    type = tostring(customDimensions[\"type\"]), \r\n    lastReceived, \r\n    elapsed, \r\n    totalElapsed = datetime_diff(\"Millisecond\", timestamp, lastReceived), \r\n    isLastInSequence, \r\n    customDimensions, \r\n    nodeKind = tostring(coalesce(customDimensions[\"Kind\"], name)), \r\n    topicId = tostring(coalesce(customDimensions[\"TopicId\"], customDimensions[\"TopicName\"]));\r\n\r\nAllFlows\r\n| summarize\r\n  MaxElapsed = max(elapsed),\r\n  MinElapsed = min(elapsed),\r\n  AvgElapsed = round(avg(elapsed),2),\r\n  StdDevElapsed = round(stdev(elapsed),2),\r\n  Percentile90Elapsed = percentile(elapsed, 90),\r\n  Percentile10Elapsed = percentile(elapsed, 10),\r\n  Count = count(),\r\n  TotalElapsed = sum(elapsed)\r\n  by topicId, nodeKind\r\n| sort by AvgElapsed desc",
+        "size": 0,
+        "showExportToExcel": true,
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "gridSettings": {
+          "rowLimit": 10000,
+          "sortBy": [
+            {
+              "itemKey": "nodeKind",
+              "sortOrder": 1
+            }
+          ]
+        },
+        "sortBy": [
+          {
+            "itemKey": "nodeKind",
+            "sortOrder": 1
+          }
+        ]
+      },
+      "name": "Execution Times by Kind and Topic"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let AllFlows = customEvents\r\n    | where timestamp {timerange} \r\n    | where name == \"BotMessageReceived\" or name == \"BotMessageSend\"\r\n    | extend conversationId = tostring(customDimensions[\"conversationId\"])\r\n    | sort by conversationId asc, timestamp asc\r\n    | scan declare (lastReceived: datetime=datetime(null)) with\r\n    (\r\n        step s1: true => lastReceived = iif(name != \"BotMessageReceived\", s1.lastReceived, timestamp);\r\n    )\r\n    | serialize\r\n    | extend isLastInSequence = iif(coalesce(next(name), \"BotMessageReceived\") == \"BotMessageReceived\", true, false)\r\n    | extend elapsed = iff(name == \"BotMessageReceived\", 0, datetime_diff(\"Millisecond\", timestamp, prev(timestamp)))\r\n    | project \r\n        conversationId, \r\n        timestamp, name, \r\n        type = tostring(customDimensions[\"type\"]), \r\n        lastReceived, \r\n        elapsed, \r\n        totalElapsed = datetime_diff(\"Millisecond\", timestamp, lastReceived), \r\n        isLastInSequence, \r\n        customDimensions, \r\n        nodeKind = tostring(coalesce(customDimensions[\"Kind\"], name)), \r\n        topicId = tostring(coalesce(customDimensions[\"TopicId\"], customDimensions[\"TopicName\"]))\r\n    | where name == \"BotMessageSend\" and isLastInSequence == true and totalElapsed > 0;\r\n\r\nAllFlows\r\n| summarize\r\n    Average = round(avg(totalElapsed), 0),\r\n    Median = percentile(totalElapsed, 50),\r\n    Stddev = round(stdev(totalElapsed), 2),\r\n    Min =min(totalElapsed),\r\n    Max = max(totalElapsed),\r\n    Count = count(),\r\n    90thPcnt = percentile(totalElapsed, 90),\r\n    95thPcnt = percentile(totalElapsed, 95),\r\n    99thPcnt = percentile(totalElapsed, 99),\r\n    GT16s = count(totalElapsed > 16000)\r\n",
+        "size": 3,
+        "title": "Performance Statistics",
+        "showExportToExcel": true,
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "table"
+      },
+      "name": "Performance Statistics"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let AllFlows = customEvents\r\n    | where timestamp {timerange} \r\n    | where name == \"BotMessageSend\" or name == \"BotMessageReceived\"\r\n    | extend conversationId = tostring(customDimensions[\"conversationId\"])\r\n    | sort by conversationId asc, timestamp asc\r\n    | scan declare (lastReceived: datetime=datetime(null)) with\r\n    (\r\n        step s1: true => lastReceived = iif(name != \"BotMessageReceived\", s1.lastReceived, timestamp);\r\n    )\r\n    | serialize\r\n    | extend isLastInSequence = iif(coalesce(next(name), \"BotMessageReceived\") == \"BotMessageReceived\", true, false)\r\n    | extend elapsed = iff(name == \"BotMessageReceived\", 0, datetime_diff(\"Millisecond\", timestamp, prev(timestamp)))\r\n    | project \r\n        conversationId, \r\n        timestamp, name, \r\n        type = tostring(customDimensions[\"type\"]), \r\n        lastReceived, \r\n        elapsed, \r\n        totalElapsed = datetime_diff(\"Millisecond\", timestamp, lastReceived), \r\n        isLastInSequence, \r\n        customDimensions, \r\n        nodeKind = tostring(coalesce(customDimensions[\"Kind\"], name)), \r\n        topicId = tostring(coalesce(customDimensions[\"TopicId\"], customDimensions[\"TopicName\"]))\r\n    | where name == \"BotMessageSend\" and isLastInSequence == true and totalElapsed > 0;\r\n\r\nlet AllFlowsSummary = AllFlows\r\n| summarize\r\n    Average = round(avg(totalElapsed), 0),\r\n    Median = percentile(totalElapsed, 50),\r\n    Stddev = round(stdev(totalElapsed), 2),\r\n    Min =min(totalElapsed),\r\n    Max = max(totalElapsed),\r\n    Count = count(),\r\n    90thPcnt = percentile(totalElapsed, 90),\r\n    95thPcnt = percentile(totalElapsed, 95),\r\n    99thPcnt = percentile(totalElapsed, 99),\r\n    GT16s = count(totalElapsed > 16000);\r\n\r\n\r\nlet total = toscalar(AllFlowsSummary | project Count);\r\n\r\nprint(total)\r\n",
+        "size": 0,
+        "showRefreshButton": true,
+        "showExportToExcel": true,
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "name": "Get the Count"
+    },
+    {
+      "type": 12,
+      "content": {
+        "version": "NotebookGroup/1.0",
+        "groupType": "editable",
+        "title": "Graphs",
+        "items": [
+          {
+            "type": 9,
+            "content": {
+              "version": "KqlParameterItem/1.0",
+              "parameters": [
+                {
+                  "id": "ef47111d-3684-427b-b993-1f00d432ab3f",
+                  "version": "KqlParameterItem/1.0",
+                  "name": "graphPeriod",
+                  "label": "Graph Period",
+                  "type": 4,
+                  "typeSettings": {
+                    "selectableValues": [
+                      {
+                        "durationMs": 300000
+                      },
+                      {
+                        "durationMs": 900000
+                      },
+                      {
+                        "durationMs": 1800000
+                      },
+                      {
+                        "durationMs": 3600000
+                      },
+                      {
+                        "durationMs": 14400000
+                      },
+                      {
+                        "durationMs": 43200000
+                      },
+                      {
+                        "durationMs": 86400000
+                      },
+                      {
+                        "durationMs": 172800000
+                      },
+                      {
+                        "durationMs": 259200000
+                      },
+                      {
+                        "durationMs": 604800000
+                      },
+                      {
+                        "durationMs": 1209600000
+                      },
+                      {
+                        "durationMs": 2419200000
+                      },
+                      {
+                        "durationMs": 2592000000
+                      },
+                      {
+                        "durationMs": 5184000000
+                      },
+                      {
+                        "durationMs": 7776000000
+                      }
+                    ],
+                    "allowCustom": true
+                  },
+                  "timeContext": {
+                    "durationMs": 86400000
+                  },
+                  "value": {
+                    "durationMs": 1800000,
+                    "endTime": "2024-11-05T23:30:00.000Z"
+                  }
+                }
+              ],
+              "style": "pills",
+              "queryType": 0,
+              "resourceType": "microsoft.insights/components"
+            },
+            "name": "parameters - 3"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "customEvents\r\n| extend ErrorMessage = tostring(customDimensions[\"ErrorMessage\"]), ErrorCode = tostring(customDimensions[\"ErrorCode\"])\r\n| where name == \"OnErrorLog\"\r\n| summarize \r\n  errorCount = count()\r\n  by ErrorCode",
+              "size": 0,
+              "timeContextFromParameter": "graphPeriod",
+              "queryType": 0,
+              "resourceType": "microsoft.insights/components",
+              "visualization": "piechart"
+            },
+            "name": "Error Types"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "let AllFlows = customEvents\r\n    | where name == \"BotMessageSend\" or name == \"BotMessageReceived\"\r\n    | extend conversationId = tostring(customDimensions[\"conversationId\"])\r\n    | sort by conversationId asc, timestamp asc\r\n    | scan declare (lastReceived: datetime=datetime(null)) with\r\n    (\r\n        step s1: true => lastReceived = iif(name != \"BotMessageReceived\", s1.lastReceived, timestamp);\r\n    )\r\n    | serialize\r\n    | extend isLastInSequence = iif(coalesce(next(name), \"BotMessageReceived\") == \"BotMessageReceived\", true, false)\r\n    | extend elapsed = iff(name == \"BotMessageReceived\", 0, datetime_diff(\"Millisecond\", timestamp, prev(timestamp)))\r\n    | project \r\n        conversationId, \r\n        timestamp, name, \r\n        type = tostring(customDimensions[\"type\"]), \r\n        lastReceived, \r\n        elapsed, \r\n        totalElapsed = datetime_diff(\"Millisecond\", timestamp, lastReceived), \r\n        isLastInSequence, \r\n        customDimensions, \r\n        nodeKind = tostring(coalesce(customDimensions[\"Kind\"], name)), \r\n        topicId = tostring(coalesce(customDimensions[\"TopicId\"], customDimensions[\"TopicName\"]))\r\n    | where name == \"BotMessageSend\" and isLastInSequence == true and totalElapsed > 0;\r\n    \r\n    let medianElapsedTime = toscalar(\r\n        AllFlows\r\n        | summarize percentile(totalElapsed,50)\r\n    );\r\n    \r\n    let meanElapsedTime = round(toscalar(\r\n        AllFlows\r\n        | summarize avg(totalElapsed)\r\n    ), 0);\r\n    \r\n    let Histogram = AllFlows\r\n    | summarize Count = count() by bin(totalElapsed, 100)\r\n    | project totalElapsed, Count;\r\n    \r\nlet MaxCount = toscalar(\r\n    Histogram\r\n    | summarize max(Count)\r\n);\r\n\r\nlet MedianLine =\r\n    range y from 0 to MaxCount step 100\r\n    | extend x = medianElapsedTime;\r\n\r\nlet MeanLine =\r\n    range y from 0 to MaxCount step 100\r\n    | extend x = meanElapsedTime;\r\n\r\n Histogram\r\n    | project totalElapsed, Count\r\n    | render columnchart with (title = strcat(\"Copilot Studio Performance - \", \"Insert time range here\"), xtitle = \"Response time (ms)\")\r\n",
+              "size": 2,
+              "title": "Response time frequency - {graphPeriod}",
+              "timeContextFromParameter": "graphPeriod",
+              "showExportToExcel": true,
+              "queryType": 0,
+              "resourceType": "microsoft.insights/components"
+            },
+            "name": "Frequency Histogram"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "let AllFlows = customEvents\r\n    | where name == \"BotMessageSend\" or name == \"BotMessageReceived\"\r\n    | extend conversationId = tostring(customDimensions[\"conversationId\"])\r\n    | sort by conversationId asc, timestamp asc\r\n    | scan declare (lastReceived: datetime=datetime(null)) with\r\n    (\r\n        step s1: true => lastReceived = iif(name != \"BotMessageReceived\", s1.lastReceived, timestamp);\r\n    )\r\n    | serialize\r\n    | extend isLastInSequence = iif(coalesce(next(name), \"BotMessageReceived\") == \"BotMessageReceived\", true, false)\r\n    | extend elapsed = iff(name == \"BotMessageReceived\", 0, datetime_diff(\"Millisecond\", timestamp, prev(timestamp)))\r\n    | project \r\n        conversationId, \r\n        timestamp, name, \r\n        type = tostring(customDimensions[\"type\"]), \r\n        lastReceived, \r\n        elapsed, \r\n        totalElapsed = datetime_diff(\"Millisecond\", timestamp, lastReceived), \r\n        isLastInSequence, \r\n        customDimensions, \r\n        nodeKind = tostring(coalesce(customDimensions[\"Kind\"], name)), \r\n        topicId = tostring(coalesce(customDimensions[\"TopicId\"], customDimensions[\"TopicName\"]))\r\n    | where name == \"BotMessageSend\" and isLastInSequence == true and totalElapsed > 0;\r\n\r\nAllFlows\r\n| summarize\r\n    Average = round(avg(totalElapsed), 0),\r\n    Median = percentile(totalElapsed, 50),\r\n    Stddev = round(stdev(totalElapsed), 2),\r\n    Min =min(totalElapsed),\r\n    Max = max(totalElapsed),\r\n    Count = count(),\r\n    90thPcnt = percentile(totalElapsed, 90),\r\n    95thPcnt = percentile(totalElapsed, 95),\r\n    99thPcnt = percentile(totalElapsed, 99),\r\n    GT16s = count(totalElapsed > 16000)\r\n",
+              "size": 0,
+              "timeContextFromParameter": "graphPeriod",
+              "queryType": 0,
+              "resourceType": "microsoft.insights/components"
+            },
+            "name": "query - 8"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "let errors = customEvents\r\n| where name == \"OnErrorLog\"\r\n| summarize\r\n  Count = count();\r\n\r\nlet errorCount = toscalar(errors | project Count);\r\n\r\n// print(errorCount);\r\n\r\nlet convCount = customEvents\r\n| distinct conversationId = tostring(customDimensions[\"conversationId\"])\r\n| summarize\r\n  Count = count();\r\n\r\nlet totalCount = toscalar( convCount | project Count);\r\n// print(totalCount);\r\n\r\nlet errorRate = errorCount*100/totalCount;\r\n\r\nprint(totalCount)\r\n| extend TotalCount=totalCount, ErrorCount=errorCount, ErrorRate=errorRate",
+              "size": 0,
+              "timeContextFromParameter": "graphPeriod",
+              "queryType": 0,
+              "resourceType": "microsoft.insights/components"
+            },
+            "name": "query - 12"
+          }
+        ]
+      },
+      "name": "Graphs"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "customEvents\r\n| where name == \"OnErrorLog\"\r\n| project timestamp, name, conversationId = tostring(customDimensions[\"conversationId\"]), errorCode = tostring(customDimensions[\"ErrorCode\"]), customDimensions",
+        "size": 0,
+        "title": "Conversations with Errors",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "showRefreshButton": true,
+        "showExportToExcel": true,
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "name": "Conversations with Errors"
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "bf4831ba-9877-4f4f-b42b-6dd9ad2705d7",
+            "version": "KqlParameterItem/1.0",
+            "name": "convId",
+            "label": "Conversation Id",
+            "type": 1,
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "value": "2MeY5fC3swh5hg2N1lQrf6-au"
+          }
+        ],
+        "style": "pills",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components"
+      },
+      "name": "parameters - 11"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "customEvents\r\n| where tostring(customDimensions[\"conversationId\"]) == \"{convId}\"\r\n| order by timestamp asc",
+        "size": 0,
+        "title": "Steps for given Conversation ID",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "name": "Steps for given Conversation ID"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "customEvents\r\n| where name == \"LogCorrelation\"\r\n| project \r\n  timestamp, \r\n  conversationId = tostring(customDimensions[\"conversationId\"]), \r\n  correlationId = tostring(customDimensions[\"correlationId\"]),\r\n  channelId = tostring(customDimensions[\"channelId\"])\r\n| where conversationId == \"{convId}\"",
+        "size": 0,
+        "title": "Correlation ID by Conversation ID",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "name": "Correlation ID by Conversation ID"
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "a480924a-b405-40c7-8ee8-d245dc44f48f",
+            "version": "KqlParameterItem/1.0",
+            "name": "corrId",
+            "label": "Correlation ID",
+            "type": 1,
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "value": "ABC123"
+          }
+        ],
+        "style": "pills",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components"
+      },
+      "name": "parameters - 14"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "customEvents\r\n| where name == \"LogCorrelation\"\r\n| project \r\n  timestamp, \r\n  conversationId = tostring(customDimensions[\"conversationId\"]), \r\n  correlationId = tostring(customDimensions[\"correlationId\"]),\r\n  channelId = tostring(customDimensions[\"channelId\"])\r\n| where correlationId == \"{corrId}\"",
+        "size": 0,
+        "title": "Conversation Id by Correlation Id",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components"
+      },
+      "name": "Conversation Id by Correlation Id"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let intervalMinutes = 5;\r\nlet timeWindowMinutes = datetime_diff('minute', {timerange:end}, {timerange:start});\r\nlet expRequests = (timeWindowMinutes / intervalMinutes);\r\ncustomEvents\r\n| where timestamp {timerange}\r\n| summarize \r\n    actualRequests = sumif(1, name == \"BotMessageReceived\")\r\n| extend healthStatus = case(\r\n    actualRequests >= expRequests, \"Healthy\",\r\n    \"Unhealthy\"\r\n    )\r\n| extend healthStatusHtml = case(\r\n        healthStatus == \"Healthy\",\r\n            strcat(\r\n            \"<div style='width:500px; height:300px;'>\"\r\n            \"<div style='width:100%; height:100%; display:flex; align-items:center; justify-content:center; background-color:lightgreen; color:darkgreen; font-weight:bold; font-size:50px; text-align:center;'>\",\r\n             tostring(healthStatus),\r\n            \"</div></div>\"),\r\n        healthStatus == \"Unhealthy\",\r\n            strcat(\r\n            \"<div style='width:500px; height:300px;'>\",\r\n            \"<div style='width:100%; height:100%; display:flex; align-items:center; justify-content:center; background-color:#FFC0CB; color:#8B0000;\"\r\n            \"font-weight:bold; font-size:50px; text-align:center;'>\",\r\n             tostring(healthStatus),\r\n            \"</div></div>\"),\r\n            \"<div>Unknown Status</div>\"\r\n            )\r\n\r\n| project healthStatusHtml",
+        "size": 0,
+        "title": "HealthCheck ",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "card",
+        "textSettings": {
+          "style": "markdown"
+        }
+      },
+      "name": "HealthCheck "
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "\r\nlet errors = customEvents\r\n| where name == \"OnErrorLog\"\r\n| summarize Count = count();\r\nlet errorCount = toscalar(errors | project Count);\r\n \r\nlet convCount = customEvents\r\n| distinct conversationId = tostring(customDimensions[\"conversationId\"])\r\n| summarize Count = count();\r\nlet totalCount = toscalar(convCount | project Count);\r\n \r\nlet errorRate = round(iff(totalCount > 0, errorCount * 100.0 / totalCount, 0.0), 2);\r\n \r\n// Output: TotalCount, ErrorCount, ErrorRate in a single row\r\ncustomEvents\r\n| extend errorRateHtml = case(\r\n        errorRate < 5,\r\n            strcat(\r\n            \"<div style='width:500px; height:300px;'>\",\r\n            \"<div style='width:100%; height:100%; display:flex; align-items:center; justify-content:center; background-color:lightgreen; color:darkgreen; font-weight:bold;\",\r\n            \"font-size:24px; text-align:center'>\",\r\n             tostring(errorRate),\r\n            \"%</div></div>\"),\r\n        errorRate >= 5,\r\n            strcat(\r\n            \"<div style='width:500px; height:300px;'>\",\r\n            \"<div style='width:100%; height:100%; display:flex; align-items:center; justify-content:center; background-color:red; color:white; font-weight:bold;\",\r\n            \"font-size:24px; text-align:center'>\",\r\n             tostring(errorRate),\r\n            \"%</div></div>\"),\r\n        \"<div>Unknown Status</div>\"\r\n    )\r\n| project errorRateHtml",
+        "size": 0,
+        "title": "Bot Error Rate",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "card",
+        "textSettings": {
+          "style": "markdown"
+        }
+      },
+      "name": "Bot Error Rate"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "customEvents\r\n| where timestamp {timerange}\r\n| summarize\r\n    totalRequests = countif(name == \"BotMessageReceived\")\r\n| extend totalRequestHtml = strcat(\r\n    \"<div style='width:500px; height:300px;'>\"\r\n    \"<div style='width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background-color:lightgreen; color:darkgreen; font-weight:bold; font-size: 100px;\",\r\n    \"text-align:center;'>\",\r\n     tostring(totalRequests),\r\n    \"<span style='font-size: 26px; font-weight: normal; margin-top: -20px;'>Requests</span>\",\r\n    \"</div>\",\r\n    \"</div>\"\r\n    )\r\n| project totalRequestHtml",
+        "size": 0,
+        "title": "Total Requests",
+        "timeContextFromParameter": "timerange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "card",
+        "textSettings": {
+          "style": "markdown"
+        }
+      },
+      "name": "Total Requests"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let AllFlows = customEvents\r\n    | where timestamp {timerange} and name == \"BotMessageSend\" or name == \"BotMessageReceived\"\r\n    | extend conversationId = tostring(customDimensions[\"conversationId\"])\r\n    | sort by conversationId asc, timestamp asc\r\n    | scan declare (lastReceived: datetime=datetime(null)) with\r\n    (\r\n        step s1: true => lastReceived = iif(name != \"BotMessageReceived\", s1.lastReceived, timestamp);\r\n    )\r\n    | serialize\r\n    | extend isLastInSequence = iif(coalesce(next(name), \"BotMessageReceived\") == \"BotMessageReceived\", true, false)\r\n    | extend elapsed = iff(name == \"BotMessageReceived\", 0, datetime_diff(\"Millisecond\", timestamp, prev(timestamp)))\r\n    | project \r\n        conversationId, \r\n        timestamp, name, \r\n        type = tostring(customDimensions[\"type\"]), \r\n        lastReceived, \r\n        elapsed, \r\n        totalElapsed = datetime_diff(\"Millisecond\", timestamp, lastReceived), \r\n        isLastInSequence, \r\n        customDimensions, \r\n        nodeKind = tostring(coalesce(customDimensions[\"Kind\"], name)), \r\n        topicId = tostring(coalesce(customDimensions[\"TopicId\"], customDimensions[\"TopicName\"]))\r\n    | where name == \"BotMessageSend\" and isLastInSequence == true and totalElapsed > 0;\r\n\r\nAllFlows\r\n| summarize AvgResponseTime = round(avg(totalElapsed), 2) by bin(timestamp, 30m)\r\n| order by timestamp asc\r\n",
+        "size": 0,
+        "title": "Avg Response Time (ms)",
+        "timeContextFromParameter": "timerange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "linechart"
+      },
+      "name": "Avg Response Time (ms)"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let TotalCalls = customEvents\r\n| where timestamp {timerange} and name == \"BotMessageReceived\";\r\n\r\nTotalCalls\r\n| summarize TotalCalls = count() by bin(timestamp, 1h)\r\n| order by timestamp asc\r\n| render areachart",
+        "size": 0,
+        "title": "Throughput",
+        "timeContextFromParameter": "timerange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components"
+      },
+      "name": "Throughput"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let AllFlows = customEvents\r\n| where timestamp {timerange} \r\n| extend conversationId = tostring(customDimensions[\"conversationId\"])\r\n| sort by conversationId asc, timestamp asc\r\n| scan declare (lastReceived: datetime=datetime(null)) with\r\n(\r\n    step s1: true => lastReceived = iif(name != \"BotMessageReceived\", s1.lastReceived, timestamp);\r\n)\r\n| serialize\r\n| extend isLastInSequence = iif(coalesce(next(name), \"BotMessageReceived\") == \"BotMessageReceived\", true, false)\r\n| extend elapsed = iff(name == \"BotMessageReceived\", 0, datetime_diff(\"Millisecond\", timestamp, prev(timestamp)))\r\n| project \r\n    conversationId, \r\n    timestamp, name, \r\n    type = tostring(customDimensions[\"type\"]), \r\n    lastReceived, \r\n    elapsed, \r\n    totalElapsed = datetime_diff(\"Millisecond\", timestamp, lastReceived), \r\n    isLastInSequence, \r\n    customDimensions, \r\n    nodeKind = tostring(coalesce(customDimensions[\"Kind\"], name)), \r\n    topicId = tostring(coalesce(customDimensions[\"TopicId\"], customDimensions[\"TopicName\"]));\r\n\r\nAllFlows\r\n| summarize\r\n  MaxElapsed = max(elapsed),\r\n  AvgElapsed = round(avg(elapsed),2),\r\n  Percentile90Elapsed = percentile(elapsed, 90),\r\n  Count = count()\r\n  by topicId, nodeKind\r\n| sort by AvgElapsed desc\r\n| limit 50",
+        "size": 0,
+        "title": "Topics by Max Response Time",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components"
+      },
+      "name": "Topics by Max Response Time"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let errors = customEvents\r\n| where timestamp {timerange} and name == \"OnErrorLog\"\r\n| order by timestamp desc;\r\n\r\nerrors\r\n| extend\r\n    errorMessage = tostring(customDimensions[\"ErrorMessage\"]),\r\n    conversationId = tostring(customDimensions[\"conversationId\"]),\r\n    channelId = tostring(customDimensions[\"channelId\"]),\r\n    errorCode = tostring(customDimensions[\"ErrorCode\"])\r\n| project timestamp, conversationId, errorCode, errorMessage, channelId\r\n",
+        "size": 0,
+        "title": "Error logs",
+        "timeContextFromParameter": "timerange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components"
+      },
+      "name": "Error logs"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let requestDetails = customEvents\r\n| where timestamp {timerange}\r\n| summarize \r\n    totalRequests = countif(name == \"BotMessageReceived\"),\r\n    errorCount = countif(name == \"OnErrorLog\")\r\n| extend\r\n    totalRequests,\r\n    errorCount,\r\n    successCount = totalRequests - errorCount;\r\n\r\nrequestDetails\r\n| extend\r\n    successRate = round((todouble(successCount) / totalRequests * 100), 2),\r\n    errorRate = round((todouble(errorCount) / totalRequests * 100), 2)\r\n| project successRate, errorRate\r\n| extend\r\n    category = pack_array(\"Success\", \"Error\"),\r\n    value = pack_array(successRate, errorRate)\r\n| mv-expand category to typeof(string), value to typeof(real)\r\n| project category, value\r\n| render piechart",
+        "size": 0,
+        "title": "Error Rate",
+        "timeContextFromParameter": "timerange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components"
+      },
+      "name": "Error Rate"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let requestDetails = customEvents\r\n| where timestamp {timerange}\r\n| summarize \r\n    errorCount = countif(name == \"OnErrorLog\") by bin(timestamp, 30m)\r\n| extend\r\n    errorCount;\r\n\r\nrequestDetails\r\n| project errorCount, timestamp\r\n| order by timestamp asc\r\n| render barchart",
+        "size": 0,
+        "title": "Error Count",
+        "timeContextFromParameter": "timerange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components"
+      },
+      "name": "Error Count"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let AllFlows = customEvents\r\n    | where timestamp {timerange}  and name == \"BotMessageSend\" or name == \"BotMessageReceived\"\r\n    | extend conversationId = tostring(customDimensions[\"conversationId\"])\r\n    | sort by conversationId asc, timestamp asc\r\n    | scan declare (lastReceived: datetime=datetime(null)) with\r\n    (\r\n        step s1: true => lastReceived = iif(name != \"BotMessageReceived\", s1.lastReceived, timestamp);\r\n    )\r\n    | serialize\r\n    | extend isLastInSequence = iif(coalesce(next(name), \"BotMessageReceived\") == \"BotMessageReceived\", true, false)\r\n    | extend elapsed = iff(name == \"BotMessageReceived\", 0, datetime_diff(\"Millisecond\", timestamp, prev(timestamp)))\r\n    | project \r\n        conversationId, \r\n        timestamp, name,\r\n        elapsed, \r\n        totalElapsed = datetime_diff(\"Millisecond\", timestamp, lastReceived), \r\n        isLastInSequence\r\n    | where name == \"BotMessageSend\" and isLastInSequence == true and totalElapsed > 0;\r\n\r\nAllFlows\r\n| summarize\r\n    AvgResponseTime = round(avg(totalElapsed), 2),\r\n    P90ResponseTime = percentile(totalElapsed, 90)\r\n    by bin(timestamp, 30m)\r\n| order by timestamp asc\r\n| render timechart\r\n",
+        "size": 0,
+        "aggregation": 3,
+        "title": "90 Percentile Response Time (ms)",
+        "timeContextFromParameter": "timerange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components"
+      },
+      "name": "90 Percentile Response Time (ms)"
+    }
+  ],
+  "fallbackResourceIds": [
+    "/subscriptions/4aea97c5-c44d-44f5-aa78-b401f353a1c7/resourcegroups/lmt-cps-logging/providers/microsoft.insights/components/lmt-cps-app-ins"
+  ],
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}
