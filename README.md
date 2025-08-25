@@ -32,17 +32,17 @@ To import the CPS Dashboard Template into App Insights, follow these steps:
  <br>
  </p> 
 	
--  Click on the newly created application insights instance. Select Monitoring --> Workbooks.
+-  Click on the newly created application insights instance. Select Monitoring :arrow_right: Workbooks.
 
  <p  align="center">
  <img  src="images/2-New.png"  alt="Click on the newly created application insights instance. -Selecte on Monitoring and Workbooks."  width="600px">
  <br>
  </p> 
  
--  Select New --> Advanced Editior icon.
+-  Select New :arrow_right: Advanced Editior icon.
  
  <p  align="center">
- <img  src="images/3-Editor.png"  alt="Select New --> Advanced Editior icon."  width="600px">
+ <img  src="images/3-Editor.png"  alt="Select New :arrow_right: Advanced Editior icon."  width="600px">
  <br>
  </p> 
 
