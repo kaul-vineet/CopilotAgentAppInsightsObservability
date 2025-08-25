@@ -19,7 +19,9 @@ This repository provides a deployment-ready CPS dashboard template, complete wit
 To deploy this project follow the steps
 
 ### Assumptions
-> [! IMPORTANT] This project support one Copilot agent linked to single instance of App Insights.
+
+> [!IMPORTANT]
+> This project support one Copilot agent linked to single instance of App Insights.
 
 ### Import Template
 To import the CPS Dashboard Template into App Insights, follow these steps:
