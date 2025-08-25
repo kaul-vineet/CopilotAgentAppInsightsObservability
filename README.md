@@ -9,6 +9,11 @@ This repository provides a deployment-ready CPS dashboard template, complete wit
 - [Ginette Vellera](gvellera@microsoft.com)
 - [Linda M Thomas](lindamthomas@microsoft.com)
 - [Daniel Heinze](Daniel.Heinze@microsoft.com)
+
+## Contributing
+
+- [Vineet Kaul](vineetkaul@microsoft.com)
+
 ## Deployment
 
 To deploy this project follow the steps
@@ -21,26 +26,55 @@ To import the CPS Dashboard Template into App Insights, follow these steps:
 -  Navigate to the App Insights on Azure portal portal and create an instance.
 
  <p  align="center">
- <img  src="images/1-Workbooks.png"  alt="Navigate to the App Insights on Azure portal portal and create an instance."  width="800px">
+ <img  src="images/1-Workbooks.png"  alt="Navigate to the App Insights on Azure portal portal and create an instance."  width="600px">
  <br>
  </p> 
 	
--  Click on the newly created application insights instance. -> Click on Monitoring -> Click on Workbooks.
+-  Click on the newly created application insights instance. Select Monitoring --> Workbooks.
 
  <p  align="center">
- <img  src="images/2-ShowRunCommand.png"  alt="In Command Bar, select `Show and Run Commands`."  width="800px">
+ <img  src="images/2-New.png"  alt="Click on the newly created application insights instance. -Selecte on Monitoring and Workbooks."  width="600px">
  <br>
  </p> 
  
--  Click on New -> Advanced Editior icon
--  Copy the template content from the `cps_dashboard_template.workbook` file to Gallery Template.
--  Click on Apply.
+-  Select New --> Advanced Editior icon.
+ 
+ <p  align="center">
+ <img  src="images/3-Editor.png"  alt="Select New --> Advanced Editior icon."  width="600px">
+ <br>
+ </p> 
+
+-  Copy the template content from the `cps_dashboard_template.workbook` file to Gallery Template. Click on Apply.
+
+ <p  align="center">
+ <img  src="images/4-Gallery.png"  alt="Copy the template content from the `cps_dashboard_template.workbook` file to Gallery Template."  width="600px">
+ <br>
+ </p> 
 
 ### Create Dashboard
--  Go to Dashboard Hub on Azure Portal
--  Click on Create a Dashboard
--  Go to the workbook created previously and click on Pin All
--  Select the dashboard created in (1). You will also have option to create new dashboard here
+-  Go to Dashboard Hub on Azure Portal.
+
+ <p  align="center">
+ <img  src="images/5-DashboardHub.png"  alt="Go to Dashboard Hub on Azure Portal."  width="600px">
+ <br>
+ </p> 
+
+-  Click on Create a Dashboard.
+
+ <p  align="center">
+ <img  src="images/6-CreateDashboard.png"  alt="Click on Create a Dashboard."  width="600px">
+ <br>
+ </p> 
+
+-  Go to the workbook created previously and click on Pin All.
+
+ <p  align="center">
+ <img  src="images/8-Pin.png"  alt="Click on Create a Dashboard."  width="600px">
+ <br>
+ </p> 
+
+-  Select the dashboard created in (1). You will also have option to create new dashboard here.
+
 -  Now restructure the tiles on the dashboard as per your requirement
 
 ## Sections and Metrics Overview
