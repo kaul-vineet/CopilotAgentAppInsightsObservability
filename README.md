@@ -19,7 +19,19 @@ To deploy this project follow the steps
 ### Import Template
 To import the CPS Dashboard Template into App Insights, follow these steps:
 -  Navigate to the App Insights on Azure portal portal and create an instance.
+
+ <p  align="center">
+ <img  src="images/1-Workbooks.png"  alt="Navigate to the App Insights on Azure portal portal and create an instance."  width="800px">
+ <br>
+ </p> 
+	
 -  Click on the newly created application insights instance. -> Click on Monitoring -> Click on Workbooks.
+
+ <p  align="center">
+ <img  src="images/2-ShowRunCommand.png"  alt="In Command Bar, select `Show and Run Commands`."  width="800px">
+ <br>
+ </p> 
+ 
 -  Click on New -> Advanced Editior icon
 -  Copy the template content from the `cps_dashboard_template.workbook` file to Gallery Template.
 -  Click on Apply.
@@ -52,7 +64,6 @@ Tracks and analyzes errors occurring in the system, aiding in troubleshooting an
 - **Bot Error Rate**: Tracks errors specific to bot-related requests.
 - **Error Logs**: Detailed logs of errors for in-depth debugging.
 - **Conversations with Errors**: Identifies conversations where errors occurred for targeted analysis.
-
 
 
 ### 3. Response Time Analysis
